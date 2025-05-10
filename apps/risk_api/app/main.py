@@ -19,7 +19,11 @@ class Portfolio(BaseModel):
     positions: List[Position]
 
 
-@app.post("/portfolio", response_model=int, summary="Save user portfolio")
+# Those two arguments:
+# response_model: Enforce & document that the response is an integer 
+# summary: Human‑readable description in the generated docs) 
+# are just metadata supplied to FastAPI’s route decorator
+@app.post("/portfolio", response_model=int, summary="Save user portfolio") 
 def save_user_input(portfolio: Portfolio) -> int:
     """
     Persist a user’s portfolio (list of {symbol, allocation}).
