@@ -1,0 +1,31 @@
+# version: "3.8"
+
+services:
+  risk_api:
+    build:
+      context: ./apps/risk_api
+      dockerfile: Dockerfile
+    container_name: risk_api
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6.0
+    container_name: risk_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: risk_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:

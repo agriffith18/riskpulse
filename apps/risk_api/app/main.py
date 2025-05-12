@@ -69,3 +69,6 @@ def get_latest_price(symbol: str) -> dict:
     # TODO: Integrate real market data API (e.g., AlphaVantage, YahooFinance)
     price = round(random.uniform(10.0, 500.0), 2)
     return {"symbol": symbol, "price": price}
+
+
+print("Docker is magic")
