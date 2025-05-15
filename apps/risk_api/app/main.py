@@ -1,34 +1,63 @@
-from fastapi import FastAPI, HTTPException, Query # type: ignore
-from pydantic import BaseModel #type: ignore
+from fastapi import FastAPI, HTTPException, Query # type:ignore
 from typing import List, Dict
+from pydantic import BaseModel # type:ignore
 import random
 
-app = FastAPI()
 
-# In-memory “database”
-portfolios: Dict[int, "Portfolio"] = {}
-_next_portfolio_id = 1
+# to this (absolute import)
+from app.core.db import lifespan  # type:ignore
+from app.core.settings import settings
+
 
 
 class Position(BaseModel):
     symbol: str
-    allocation: float  # as a fraction or percentage
+    allocation: float
 
 
 class Portfolio(BaseModel):
     positions: List[Position]
 
 
-# Those two arguments:
-# response_model: Enforce & document that the response is an integer 
-# summary: Human‑readable description in the generated docs) 
-# are just metadata supplied to FastAPI’s route decorator
-@app.post("/portfolio", response_model=int, summary="Save user portfolio") 
+# Single FastAPI instance, with lifespan hook
+app = FastAPI(
+    title="RiskPulse API",
+    lifespan=lifespan,
+)
+
+
+# In‑memory store
+portfolios: Dict[int, Portfolio] = {}
+_next_portfolio_id = 1
+
+
+@app.get("/health/db", summary="DB health check")
+async def db_health() -> dict:
+    try:
+        # this will throw if not connected
+        await app.mongodb_client.admin.command("ping")
+    except Exception:
+        raise HTTPException(status_code=503, detail="MongoDB not reachable")
+    return {"status": "ok", "mongodb": "connected"}
+
+
+@app.get("/", summary="Fetch external data safely")
+async def read_root():
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get("https://jsonplaceholder.typicode.com/todos/1")
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
+    except (httpx.RequestError, ValueError) as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return {"data": data}
+
+
+@app.post("/portfolio", response_model=int, summary="Save user portfolio")
 def save_user_input(portfolio: Portfolio) -> int:
-    """
-    Persist a user’s portfolio (list of {symbol, allocation}).
-    Returns a generated portfolio ID.
-    """
     global _next_portfolio_id
     pid = _next_portfolio_id
     portfolios[pid] = portfolio
@@ -38,9 +67,6 @@ def save_user_input(portfolio: Portfolio) -> int:
 
 @app.get("/portfolio/{pid}", response_model=Portfolio, summary="Retrieve a saved portfolio")
 def read_portfolio(pid: int) -> Portfolio:
-    """
-    Look up a portfolio by its ID.
-    """
     if pid not in portfolios:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return portfolios[pid]
@@ -50,25 +76,13 @@ def read_portfolio(pid: int) -> Portfolio:
 def compute_value_at_risk(
     pid: int = Query(..., description="ID of the saved portfolio")
 ) -> dict:
-    """
-    Calculates (stub) the Value at Risk for the portfolio identified by `pid`.
-    """
     if pid not in portfolios:
         raise HTTPException(status_code=404, detail="Portfolio not found")
-
-    # TODO: Replace with real VaR calculation
-    var_value = 0.05  
+    var_value = 0.05
     return {"portfolio_id": pid, "var": var_value}
 
 
 @app.get("/price/{symbol}", summary="Get latest price for a symbol")
 def get_latest_price(symbol: str) -> dict:
-    """
-    Returns a mocked latest price for the given ticker symbol.
-    """
-    # TODO: Integrate real market data API (e.g., AlphaVantage, YahooFinance)
     price = round(random.uniform(10.0, 500.0), 2)
     return {"symbol": symbol, "price": price}
-
-
-print("Docker is magic")
