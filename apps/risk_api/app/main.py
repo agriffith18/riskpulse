@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Query # type:ignore
 from typing import List, Dict
 from pydantic import BaseModel # type:ignore
 import random
-
+# import httpx
 
 # to this (absolute import)
 from app.core.db import lifespan  # type:ignore
@@ -41,19 +41,19 @@ async def db_health() -> dict:
     return {"status": "ok", "mongodb": "connected"}
 
 
-@app.get("/", summary="Fetch external data safely")
-async def read_root():
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get("https://jsonplaceholder.typicode.com/todos/1")
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
-    except (httpx.RequestError, ValueError) as e:
-        raise HTTPException(status_code=502, detail=str(e))
+# @app.get("/", summary="Fetch external data safely")
+# async def read_root():
+#     try:
+#         async with httpx.AsyncClient(timeout=5.0) as client:
+#             resp = await client.get("https://jsonplaceholder.typicode.com/todos/1")
+#             resp.raise_for_status()
+#             data = resp.json()
+#     except httpx.HTTPStatusError as e:
+#         raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
+#     except (httpx.RequestError, ValueError) as e:
+#         raise HTTPException(status_code=502, detail=str(e))
 
-    return {"data": data}
+#     return {"data": data}
 
 
 @app.post("/portfolio", response_model=int, summary="Save user portfolio")
