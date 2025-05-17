@@ -1,12 +1,13 @@
-from fastapi import FastAPI, HTTPException, Query, Request # type:ignore
+from fastapi import FastAPI, HTTPException, Query, Request, status # type:ignore
 from typing import List
 from pydantic import BaseModel, ConfigDict, EmailStr, Field # type:ignore
-import random
+from bson import ObjectId
 
 from .core.db import lifespan 
 from .core.settings import settings
 
-
+# TODO: add Cors middleware -> https://fastapi.tiangolo.com/tutorial/cors/#use-corsmiddleware
+# TODO: considerations for avoiding duplicate portfolios and editing existing portfolios
 
 class Position(BaseModel):
     symbol: str
@@ -33,6 +34,10 @@ class User(BaseModel):
         extra="ignore" # drop any other fields
     )
 
+class CreatePortfolioRequest(BaseModel):
+    user_id: str
+    portfolio: Portfolio
+
 
 # Single FastAPI instance, with lifespan hook
 app = FastAPI(
@@ -41,7 +46,7 @@ app = FastAPI(
 )
 
 
-@app.get("/health/db", summary="DB health check")
+@app.get("/health/db", summary="DB health check", tags=["db check"])
 async def db_health() -> dict:
     try:
         # this will throw if not connected
@@ -51,7 +56,12 @@ async def db_health() -> dict:
     return {"status": "ok", "mongodb": "connected"}
 
 
-@app.post("/create-user", response_model=User, summary="Create user in database")
+@app.post(
+    "/create-user", 
+    response_model=User, 
+    status_code=status.HTTP_201_CREATED, 
+    summary="Create user in database", tags=["user"],
+)
 async def create_user(request: Request, user: User):
     """Insert a new user document and return the saved record"""
     
@@ -79,14 +89,42 @@ async def create_user(request: Request, user: User):
     
     return User.model_validate(saved_doc)
 
-@app.post("/portfolio", response_model=int, summary="Save user portfolio")
-def save_user_input(portfolio: Portfolio) -> int:
-    global _next_portfolio_id
-    pid = _next_portfolio_id
-    portfolios[pid] = portfolio
-    _next_portfolio_id += 1
-    return pid
+@app.post(
+    "/portfolio",
+    response_model=str,
+    status_code=status.HTTP_201_CREATED,
+    summary="Save a new portfolio for an existing user",
+    tags=["portfolio"],
+)
+async def save_user_input(
+    request: Request,
+    body: CreatePortfolioRequest
+) -> str:
+    """
+    Accepts {"user_id": "...", "portfolio": { positions: [...] }},
+    verifies the user exists, then creates a separate portfolio document.
+    Returns the new portfolio's ID.
+    """
+    users_col = request.app.mongodb["users"]
+    portfolios_col = request.app.mongodb["portfolios"]
 
+    # Verify user exists
+    if not await users_col.count_documents(
+        {"_id": ObjectId(body.user_id)}, limit=1
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Insert the portfolio, linking it to the user
+    data = body.portfolio.model_dump()
+    data["user_id"] = ObjectId(body.user_id)
+    result = await portfolios_col.insert_one(data)
+
+    # Return the new portfolio's ID as a string
+    return str(result.inserted_id)
+   
 
 @app.get("/portfolio/{pid}", response_model=Portfolio, summary="Retrieve a saved portfolio")
 def read_portfolio(pid: int) -> Portfolio:
