@@ -15,6 +15,7 @@ motor==3.7.1            # ← provides motor.motor_asyncio.AsyncIOMotorClient
 python-dotenv==1.1.0
 pydantic-settings==2.2.1
 python-dateutil==2.9.0.post0
+email-validator>=1.2.0
 
 # --- misc util (keep if you really use them elsewhere) ---
 click==8.1.8
