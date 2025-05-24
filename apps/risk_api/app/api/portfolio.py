@@ -32,6 +32,7 @@ router = APIRouter(
     response_model=str,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new portfolio for a user",
+    tags=["portfolio"]
 )
 async def create_portfolio(
     body: CreatePortfolioRequest,
@@ -54,11 +55,12 @@ async def create_portfolio(
     # 3) Return the new portfolio's ID
     return str(result.inserted_id)
 
-
+# read
 @router.get(
     "/{pid}",
     response_model=Portfolio,
     summary="Retrieve a saved portfolio by its ID",
+    tags=["portfolio"]
 )
 async def read_portfolio(
     pid: str,
@@ -78,11 +80,12 @@ async def read_portfolio(
     return Portfolio.model_validate(saved)
 
 
-# put
+# update
 @router.put(
     "/{pid}",
     response_model=Portfolio,
-    summary="Update a saved portfolio by its ID"
+    summary="Update a saved portfolio by its ID",
+    tags=["portfolio"]
 )
 async def update_portfolio(
     body: Portfolio,
@@ -92,7 +95,7 @@ async def update_portfolio(
     portfolios_col = db["portfolios"]
 
     # 1) Build the update data from the incoming model
-    update_data = body.model_dump()
+    update_data = body.model_dump(exclude_unset=True, by_alias=True)
 
     # 2) Perform find_one_and_update:
     updated = await portfolios_col.find_one_and_update(
@@ -118,17 +121,24 @@ async def update_portfolio(
     "/{pid}",
     response_model=bool,                       
     summary="Delete a portfolio by its ID",
+    tags=["portfolio"]
 )
 async def delete_portfolio(
-    pid: str,
+    user_id: str,
     db: Database = Depends(get_db),            
 ) -> bool:
     portfolios_col = db["portfolios"]
 
+    if not await portfolios_col.count_documents({"_id": ObjectId(user_id)}, limit=1):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
     # Perform the deletion by ObjectId
     result = await portfolios_col.delete_one(
-        {"_id": ObjectId(pid)}
+        {"_id": ObjectId(user_id)}
     )
-
+    
     #  Returns True if exactly one document was removed
     return result.deleted_count == 1

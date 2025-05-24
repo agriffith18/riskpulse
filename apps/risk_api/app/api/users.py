@@ -1,26 +1,42 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, status # type:ignore
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status # type:ignore
 from typing import List
 from pydantic import BaseModel, ConfigDict, EmailStr, Field # type:ignore
 from bson import ObjectId
 
 # these imports are *used* in class annotations below
-from pymongo import AsyncMongoClient
 from pymongo.database import Database
+from pymongo import AsyncMongoClient
+from pymongo.collection import ReturnDocument
 
 from ..core.dependencies import get_db 
 from ..core.settings import settings
 
-router = APIRouter()
+
+# Single FastAPI instance, with lifespan hook
+router = APIRouter(
+    title="RiskPulse API",
+    lifespan=get_db,
+)
+
+class UserUpdate(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    email_address: EmailStr | None = None
+
+    model_config = ConfigDict(extra="ignore")  # allow partial updates
+
 
 class RiskPulseAPI(FastAPI):
     mongodb_client: AsyncMongoClient
     mongodb: Database
 
-# Single FastAPI instance, with lifespan hook
-router = RiskPulseAPI(
-    title="RiskPulse API",
-    lifespan=get_db,
-)
+class Position(BaseModel):
+    symbol: str
+    allocation: float
+
+class Portfolio(BaseModel):
+    positions: List[Position]
+
 
 
 class User(BaseModel):
@@ -57,7 +73,8 @@ async def db_health() -> dict:
     "/create-user", 
     response_model=User, 
     status_code=status.HTTP_201_CREATED, 
-    summary="Create user in database", tags=["user"],
+    summary="Create user in database", 
+    tags=["user"],
 )
 async def create_user(request: Request, user: User):
     """Insert a new user document and return the saved record"""
@@ -85,3 +102,105 @@ async def create_user(request: Request, user: User):
     saved_doc["id"] = str(saved_doc.pop("_id"))
     
     return User.model_validate(saved_doc)
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=User,
+    summary="Return the user with the specified ID",
+    status_code=status.HTTP_200_OK,
+)
+async def get_user(
+    user_id: str,
+    db: Database = Depends(get_db),
+) -> User:
+    users_col = db["users"]
+
+    # Verify a user with that ObjectId exists
+    exists = await users_col.count_documents(
+        {"_id": ObjectId(user_id)}, limit=1
+    )
+    if not exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Fetch the full document
+    raw = await users_col.find_one({"_id": ObjectId(user_id)})
+    # (We know it exists, so raw won't be None)
+
+    # Convert Mongo’s _id → id string
+    raw["id"] = str(raw.pop("_id"))
+
+    # Validate & return as a Pydantic model
+    return User.model_validate(raw)
+
+
+@router.put(
+    "/users/{user_id}",
+    response_model=User,
+    summary="Update the user with the specified ID",
+    status_code=status.HTTP_200_OK,
+)
+async def update_user(
+    user_id: str,
+    body: UserUpdate,                         
+    db: Database = Depends(get_db),           
+) -> User:
+    users_col = db["users"]
+
+    # Check existence by Mongo _id, not some 'user_id' field
+    if not await users_col.count_documents(
+        {"_id": ObjectId(user_id)}, limit=1
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Extract only the fields the client sent
+    update_data = body.model_dump(exclude_unset=True, by_alias=True)
+
+    # atomically update & return *the new* document
+    updated = await users_col.find_one_and_update(
+        {"_id": ObjectId(user_id)},     
+        {"$set": update_data},          
+        return_document=ReturnDocument.AFTER,
+    )
+    if not updated:
+        # this should be unreachable after the count_documents check,
+        # but defensively handle it anyway
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Convert Mongo’s ObjectId to str and alias it to `id`
+    updated["id"] = str(updated.pop("_id"))
+
+    # Validate & serialize via your full User model
+    return User.model_validate(updated)
+
+
+@router.delete(
+    "/users/{user_id}",
+    response_model=bool,
+    summary="Delete the user with the specified ID",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_user(
+    user_id: str,
+    db: Database = Depends(get_db),
+) -> bool:
+    users_col = db["users"]
+
+    # 404 if missing
+    if not await users_col.count_documents({"_id": ObjectId(user_id)}, limit=1):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    result = await users_col.delete_one({"_id": ObjectId(user_id)})
+    return result.deleted_count == 1
