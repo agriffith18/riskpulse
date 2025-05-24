@@ -1,32 +1,36 @@
+# db.py  –  initialise and tear‑down a typed async MongoDB client and database
 from fastapi import FastAPI # type: ignore
 from pymongo import AsyncMongoClient
+from pymongo.database import Database
 from contextlib import asynccontextmanager
-from .settings import settings  # type: ignore
+from .settings import settings
 
-@asynccontextmanager                     # Turns this coroutine into a context manager
-async def lifespan(app: FastAPI):        # Receives the FastAPI instance at startup
-    # ────── 1. STARTUP CODE ──────
-    # Create one shared, non-blocking MongoDB client with a 5-second “can’t connect” timeout.
-    app.mongodb_client = AsyncMongoClient(
-        settings.MONGO_URL, serverSelectionTimeoutMS=5000
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── STARTUP ────────────────────────────────────────────────────
+
+    # 1) Create the AsyncMongoClient and annotate the local variable
+    client: AsyncMongoClient = AsyncMongoClient(
+        settings.MONGO_URL,
+        serverSelectionTimeoutMS=5000,
     )
+    # 2) Attach it to the FastAPI app (no annotation here)
+    app.mongodb_client = client
 
-    # Immediately verify that the cluster is reachable; raises if not.
-    await app.mongodb_client.admin.command("ping")
+    # 3) Fail fast if credentials/URI are bad
+    await client.admin.command("ping")
 
-    # Convenience alias: default database object (based on URI’s path).
-    app.mongodb = app.mongodb_client.get_default_database()
+    # 4) Create the Database handle and annotate the local variable
+    db: Database = client.get_default_database()
+    # 5) Attach it to the FastAPI app (no annotation here)
+    app.mongodb = db
 
-    # Log a friendly confirmation so you know the DB connection succeeded.
     print("✅ MongoDB connected.")
 
-    # Yield control back to FastAPI; the application now starts serving requests.
+    # Hand control back—routes can now run
     yield
 
-    # ────── 2. SHUTDOWN CODE ──────
-    # Close the client gracefully, releasing sockets and event-loop resources.
-    await app.mongodb_client.close()
-
-    # Log that the connection pool is gone.
+    # ── SHUTDOWN ──────────────────────────────────────────────────
+    # Close the client and release resources
+    await client.close()
     print("🛑 MongoDB disconnected.")
-    
