@@ -6,6 +6,7 @@ from pymongo.database import Database
 from pymongo.collection import ReturnDocument
 
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
+from .stock_qoute import get_qoute
 
 class Position(BaseModel):
     symbol: str
@@ -63,13 +64,13 @@ async def create_portfolio(
     tags=["portfolio"]
 )
 async def read_portfolio(
-    pid: str,
+    user_id: str,
     db: Database = Depends(get_db),
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
 
     # 1) Fetch by ObjectId
-    saved = await portfolios_col.find_one({"_id": ObjectId(pid)})
+    saved = await portfolios_col.find_one({"_id": ObjectId(user_id)})
     if not saved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Portfolio not found")
 
@@ -99,8 +100,8 @@ async def update_portfolio(
 
     # 2) Perform find_one_and_update:
     updated = await portfolios_col.find_one_and_update(
-        {"_id": ObjectId(pid)},         # filter by the ObjectId
-        {"$set": update_data},          # set the new positions
+        {"_id": ObjectId(pid)},       
+        {"$set": update_data},        
         return_document=ReturnDocument.AFTER,
     )
 

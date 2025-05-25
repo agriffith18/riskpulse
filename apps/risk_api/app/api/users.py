@@ -109,6 +109,7 @@ async def create_user(request: Request, user: User):
     response_model=User,
     summary="Return the user with the specified ID",
     status_code=status.HTTP_200_OK,
+    tags=["user"],
 )
 async def get_user(
     user_id: str,
@@ -142,6 +143,7 @@ async def get_user(
     response_model=User,
     summary="Update the user with the specified ID",
     status_code=status.HTTP_200_OK,
+    tags=["user"],
 )
 async def update_user(
     user_id: str,
@@ -188,6 +190,7 @@ async def update_user(
     response_model=bool,
     summary="Delete the user with the specified ID",
     status_code=status.HTTP_200_OK,
+    tags=["user"],
 )
 async def delete_user(
     user_id: str,
