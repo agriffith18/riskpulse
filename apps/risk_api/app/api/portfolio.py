@@ -6,22 +6,10 @@ from pymongo.database import Database
 from pymongo.collection import ReturnDocument
 
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
-from .stock_utils import get_qoute
+from .stock_utils import get_quote, calculate_historical_var
 
-class Position(BaseModel):
-    symbol: str
-    allocation: float
-
-
-class Portfolio(BaseModel):
-    positions: List[Position]
-
-
-class CreatePortfolioRequest(BaseModel):
-    user_id: str
-    portfolio: Portfolio
-
-
+from app.api.schemas import Portfolio
+from app.api.stock_utils import calculate_historical_var
 
 router = APIRouter(
     prefix="/portfolio",
@@ -144,3 +132,23 @@ async def delete_portfolio(
     
     #  Returns True if exactly one document was removed
     return result.deleted_count == 1
+
+
+@router.get("/{user_id}/var", response_model=float)
+async def get_portfolio_var(
+    user_id: str,
+    db: Database = Depends(get_db),
+) -> float:
+    # 1 Fetch portfolio from Mongo
+    saved = await db["portfolios"].find_one({"_id": ObjectId(user_id)})
+    if not saved:
+        raise HTTPException(404, "Portfolio not found")
+
+    # 2 Validate into Pydantic
+    saved["id"] = str(saved.pop("_id"))
+    portfolio = Portfolio.model_validate(saved)
+
+    # 3 Calculate VaR
+    var = await calculate_historical_var(portfolio)
+
+    return var

@@ -11,6 +11,9 @@ from pymongo.collection import ReturnDocument
 from ..core.dependencies import get_db 
 from ..core.settings import settings
 
+from app.api.schemas import Portfolio, Position
+
+
 
 # Single FastAPI instance, with lifespan hook
 router = APIRouter(
@@ -29,14 +32,6 @@ class UserUpdate(BaseModel):
 class RiskPulseAPI(FastAPI):
     mongodb_client: AsyncMongoClient
     mongodb: Database
-
-class Position(BaseModel):
-    symbol: str
-    allocation: float
-
-class Portfolio(BaseModel):
-    positions: List[Position]
-
 
 
 class User(BaseModel):
