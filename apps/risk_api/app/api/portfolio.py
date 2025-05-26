@@ -6,7 +6,7 @@ from pymongo.database import Database
 from pymongo.collection import ReturnDocument
 
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
-from .stock_qoute import get_qoute
+from .stock_utils import get_qoute
 
 class Position(BaseModel):
     symbol: str

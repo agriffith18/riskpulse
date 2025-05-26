@@ -5,7 +5,7 @@ from fastapi import FastAPI # type: ignore
 from .core.db import lifespan
 from .api.portfolio import router as portfolio_router
 from .api.portfolio import router as user_router
-from .api.stock_qoute import router as market_router
+from .api.stock_utils import router as market_router
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(portfolio_router)
