@@ -28,6 +28,7 @@ router = APIRouter(
     tags=["portfolio"],
 )
 
+#create
 @router.post(
     "",
     response_model=str,
@@ -58,7 +59,7 @@ async def create_portfolio(
 
 # read
 @router.get(
-    "/{pid}",
+    "/{user_id}",
     response_model=Portfolio,
     summary="Retrieve a saved portfolio by its ID",
     tags=["portfolio"]
@@ -83,14 +84,14 @@ async def read_portfolio(
 
 # update
 @router.put(
-    "/{pid}",
+    "/{user_id}",
     response_model=Portfolio,
     summary="Update a saved portfolio by its ID",
     tags=["portfolio"]
 )
 async def update_portfolio(
     body: Portfolio,
-    pid: str,
+    user_id: str,
     db: Database = Depends(get_db),
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
@@ -100,7 +101,7 @@ async def update_portfolio(
 
     # 2) Perform find_one_and_update:
     updated = await portfolios_col.find_one_and_update(
-        {"_id": ObjectId(pid)},       
+        {"_id": ObjectId(user_id)},       
         {"$set": update_data},        
         return_document=ReturnDocument.AFTER,
     )
@@ -119,7 +120,7 @@ async def update_portfolio(
     return Portfolio.model_validate(updated)
 
 @router.delete(
-    "/{pid}",
+    "/{user_id}",
     response_model=bool,                       
     summary="Delete a portfolio by its ID",
     tags=["portfolio"]

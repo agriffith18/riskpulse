@@ -1,4 +1,3 @@
-# db.py  –  initialise and tear‑down a typed async MongoDB client and database
 from fastapi import FastAPI # type: ignore
 from pymongo import AsyncMongoClient
 from pymongo.database import Database

@@ -11,6 +11,9 @@ async def get_quote(symbol: str):
     ticker = await run_in_threadpool(yf.Ticker, symbol.upper())
 
     # 2) Fetch the info dict also off the event loop
+    """
+    This line basically tells FastAPI, please take this small function (lambda: ticker.info), run it off on a worker thread, and give me back its return value once it’s done.
+    """
     info = await run_in_threadpool(lambda: ticker.info)
 
     # 3) Return a subset (avoid spamming your clients with 100s of fields)
