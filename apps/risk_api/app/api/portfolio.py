@@ -9,7 +9,7 @@ from ..core.dependencies import get_db  # a small helper that returns request.ap
 from .stock_utils import get_quote, calculate_historical_var
 
 from app.api.schemas import Portfolio, CreatePortfolioRequest
-from app.api.stock_utils import calculate_historical_var
+from app.api.stock_utils import calculate_historical_var, beta_calculation
 
 router = APIRouter(
     prefix="/portfolio",
@@ -152,3 +152,19 @@ async def get_portfolio_var(
     var = await calculate_historical_var(portfolio)
 
     return var
+
+# calls beta function inside stock_utils.py
+@router.get("/{user_id}/beta", response_model=float)
+async def get_portfolio_beta(
+    user_id: str,
+    db: Database = Depends(get_db),
+) -> float:
+    saved = await db["portfolios"].find_one({"_id": ObjectId(user_id)})
+    if not saved:
+        raise HTTPException(404, "Portfolio not found")
+
+    saved["id"] = str(saved.pop("_id"))
+    portfolio = Portfolio.model_validate(saved)
+
+    beta_value = await beta_calculation(portfolio)
+    return beta_value
