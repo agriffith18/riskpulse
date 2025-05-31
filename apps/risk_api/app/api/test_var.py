@@ -7,13 +7,11 @@ from datetime import datetime
 import yfinance as yf #type: ignore
 
 
-# 1️⃣ Bring in the VaR function from stock_utils:
+# Bring in the VaR function from stock_utils:
 from .stock_utils import calculate_historical_var
 
-# 2️⃣ Import the Pydantic models from portfolio.py (where they actually live):
+# Import the Pydantic models from portfolio.py (where they actually live):
 from .schemas import Portfolio, Position
-
-# (And of course your fetch_price_frame helper if you still use it)
 
 
 def fetch_price_frame(
@@ -42,7 +40,7 @@ def fetch_price_frame(
     return df
 
 async def main():
-    # 1) Define a toy portfolio
+    # 1) Define a fake portfolio
     portfolio = Portfolio(
         positions=[
             Position(symbol="AAPL", allocation=0.6),
@@ -58,7 +56,7 @@ async def main():
 
     # 3) Inspect it
     print("--- RAW DataFrame head ---")
-    print(raw_df.head())         # shows you all of Open/High/Low/Close/Volume …
+    print(raw_df.head()) # shows you all of Open/High/Low/Close/Volume etc
 
     # 4) Drill into Close
     if isinstance(raw_df.columns, pd.MultiIndex):
