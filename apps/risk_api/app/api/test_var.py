@@ -8,7 +8,7 @@ import yfinance as yf #type: ignore
 
 
 # Bring in the VaR function from stock_utils:
-from .stock_utils import calculate_historical_var
+from .stock_utils import calculate_historical_var, beta_calculation
 
 # Import the Pydantic models from portfolio.py (where they actually live):
 from .schemas import Portfolio, Position
@@ -40,7 +40,7 @@ def fetch_price_frame(
     return df
 
 async def main():
-    # 1) Define a fake portfolio
+    # 1) Define a toy portfolio to test with:
     portfolio = Portfolio(
         positions=[
             Position(symbol="AAPL", allocation=0.6),
@@ -48,28 +48,42 @@ async def main():
         ]
     )
 
-    # 2) Pull the raw DataFrame (blocking, so wrap in threadpool)
+    # --------------------------------------
+    # Part A: Inspect the raw price DataFrame
+    # --------------------------------------
+    print("▶️  Fetching raw price DataFrame for AAPL, MSFT…")
     raw_df: pd.DataFrame = await run_in_threadpool(
         fetch_price_frame,
-        [p.symbol for p in portfolio.positions]
+        [p.symbol for p in portfolio.positions],
+        "2020-01-01",                      # start_date
+        None                               # end_date → defaults to today
     )
+    print("\n--- RAW DataFrame head ---")
+    print(raw_df.head())
 
-    # 3) Inspect it
-    print("--- RAW DataFrame head ---")
-    print(raw_df.head()) # shows you all of Open/High/Low/Close/Volume etc
-
-    # 4) Drill into Close
+    # Extract the 'Close' column(s) uniformly:
     if isinstance(raw_df.columns, pd.MultiIndex):
-        close = raw_df["Close"]
+        close_df = raw_df["Close"]
     else:
-        close = raw_df["Close"].to_frame()
+        close_df = raw_df["Close"].to_frame()
 
-    print("\n--- Close head ---")
-    print(close.head())
+    print("\n--- Close prices head ---")
+    print(close_df.head())
 
-    # 5) Now call your VaR function
+    # --------------------------------------
+    # Part B: Call calculate_historical_var
+    # --------------------------------------
+    print("\n▶️  Calculating Historical VaR (95%)…")
     var_95 = await calculate_historical_var(portfolio)
-    print(f"\n95% Historical VaR = {var_95:.2%}")
+    print(f"95% Historical VaR = {var_95:.2%}")
+
+    # --------------------------------------
+    # Part C: Call beta_calculation
+    # --------------------------------------
+    print("\n▶️  Calculating portfolio beta vs S&P 500…")
+    beta_val = await beta_calculation(portfolio)
+    print(f"Portfolio Beta (vs S&P 500) = {beta_val:.4f}")
 
 if __name__ == "__main__":
     asyncio.run(main())
+    
