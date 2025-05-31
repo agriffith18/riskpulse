@@ -13,4 +13,3 @@ class Portfolio(BaseModel):
 class CreatePortfolioRequest(BaseModel):
     user_id: str
     portfolio: Portfolio
-

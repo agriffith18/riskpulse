@@ -8,7 +8,7 @@ from pymongo.collection import ReturnDocument
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
 from .stock_utils import get_quote, calculate_historical_var
 
-from app.api.schemas import Portfolio
+from app.api.schemas import Portfolio, CreatePortfolioRequest
 from app.api.stock_utils import calculate_historical_var
 
 router = APIRouter(
