@@ -59,11 +59,15 @@ async def calculate_historical_var(
         end=end_date,
         progress=False,
         threads=False, # needed so yfinance doesn’t spawn extra threads inside that worker thread.
-        auto_adjust=False
+        auto_adjust=True
     )
     
     # yf returns a MultiIndex if multiple symbols
-    close = df["Close"] if isinstance(df.columns, pd.MultiIndex) else df["Close"].to_frame()
+    close = (
+        df["Close"] 
+        if isinstance(df.columns, pd.MultiIndex) 
+        else df["Close"].to_frame()
+    )
 
     # 3 Compute daily returns and drop any missing days
     returns = close.pct_change().dropna()
@@ -90,39 +94,39 @@ async def calculate_daily_returns(
     compute each ticker’s daily returns, combine them by weight,
     then return the standard deviation of the portfolio’s daily returns.
     """
-    # 1) Extract symbols and weights
+    # 1 Extract symbols and weights
     symbols = [pos.symbol.upper() for pos in portfolio.positions]
     allocations = np.array([pos.allocation for pos in portfolio.positions])
 
-    # 2) Ensure end_date is a string "YYYY-MM-DD"
+    # 2 Ensure end_date is a string "YYYY-MM-DD"
     end_date = end_date or datetime.today().strftime("%Y-%m-%d")
 
-    # 3) Download closing prices off the event loop
+    # 3 Download closing prices off the event loop
     df = await run_in_threadpool(
         yf.download,               
         symbols,                   
-        start=start_date,          # keyword args start here for run_in_threadpool https://ranaroussi.github.io/yfinance/reference/api/yfinance.download.html#yfinance.download
+        start=start_date, # keyword args start here for run_in_threadpool https://ranaroussi.github.io/yfinance/reference/api/yfinance.download.html#yfinance.download
         end=end_date,
         progress=False,
         threads=False,
-        auto_adjust=False
+        auto_adjust=True
     )
 
-    # 4) Extract the "Close" price DataFrame uniformly
+    # 4 Extract the "Close" price DataFrame uniformly
     close = (
         df["Close"]
         if isinstance(df.columns, pd.MultiIndex)
         else df["Close"].to_frame()
     )
 
-    # 5) Compute each ticker’s daily returns, dropping the first NaN row
+    # 5 Compute each ticker’s daily returns, dropping the first NaN row
     returns = close.pct_change().dropna()
 
-    # 6) Compute the portfolio’s daily return each day:
+    # 6 Compute the portfolio’s daily return each day:
     # a weighted sum of individual returns
     port_returns = returns.dot(allocations)
 
-    # 7) Return the standard deviation of the portfolio’s daily returns
+    # 7 Return the standard deviation of the portfolio’s daily returns
     return float(port_returns.std())
 
 # What is “beta”?
@@ -166,7 +170,7 @@ async def beta_calculation(
         end=end_date,
         progress=False,
         threads=False,   # turn off yfinance’s internal threads
-        auto_adjust=False
+        auto_adjust=True
     )
     # Extract a DataFrame of just the Close prices:
     # If MultiIndex, each ticker is a separate column under 'Close'
