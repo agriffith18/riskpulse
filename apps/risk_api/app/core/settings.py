@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings # type: ignore
 from pydantic import Field # type: ignore
 class Settings(BaseSettings):
     MONGO_URL: str = Field(..., env="MONGO_URL")
+    secret: str
+    algorithm: str
     # can add more, e.g. JWT_SECRET: str, REDIS_URL: str, etc.
 
     class Config:
