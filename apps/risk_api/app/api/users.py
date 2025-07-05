@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, status # type:ignore
 from typing import List
 from pydantic import BaseModel, ConfigDict, EmailStr, Field # type:ignore
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 
 # these imports are *used* in class annotations below
-from pymongo.database import Database
-from pymongo import AsyncMongoClient
-from pymongo.collection import ReturnDocument
+from pymongo.database import Database # type: ignore
+from pymongo import AsyncMongoClient # type: ignore
+from pymongo.collection import ReturnDocument # type: ignore
 
 from ..core.dependencies import get_db 
 from ..core.settings import settings
@@ -44,6 +44,7 @@ class User(BaseModel):
     first_name: str
     last_name: str
     email_address: EmailStr
+    password: str
     portfolios: List[Portfolio]
     
     model_config = ConfigDict(

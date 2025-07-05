@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field # type: ignore
 
 class UserSchema(BaseModel):
     fullname: str = Field(...)
@@ -25,3 +25,4 @@ class UserLoginSchema(BaseModel):
                 "password": "someweakpassword"
             }
         }
+        

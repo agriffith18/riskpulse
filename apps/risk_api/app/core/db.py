@@ -1,6 +1,6 @@
 from fastapi import FastAPI # type: ignore
-from pymongo import AsyncMongoClient
-from pymongo.database import Database
+from pymongo import AsyncMongoClient # type: ignore
+from pymongo.database import Database # type: ignore
 from contextlib import asynccontextmanager
 from .settings import settings
 
