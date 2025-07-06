@@ -12,6 +12,8 @@ venv/
 # IDE / Editor
 .vscode/
 .idea/
+.vscode/settings.json
+
 
 # OS
 *.DS_Store
@@ -21,3 +23,5 @@ venv/
 
 # Secrets
 .env
+
+
