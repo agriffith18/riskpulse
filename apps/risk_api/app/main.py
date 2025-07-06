@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, status
+from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, status, Response
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pymongo.collection import Collection
 from pymongo.database import Database
 from bson import ObjectId
@@ -8,7 +9,7 @@ from .core.db import RiskPulseAPI, lifespan
 from .core.dependencies import get_db
 from .api.portfolio import router as portfolio_router
 from .api.stock_utils import router as market_router
-from app.auth.auth_handler import sign_jwt
+from app.auth.auth_handler import sign_jwt, decode_jwt
 from app.models.user import UserSchema, UserLoginSchema
 
 # Use FastAPI subclass so .mongodb and .mongodb_client exist
@@ -23,6 +24,7 @@ app.include_router(portfolio_router, prefix="/portfolio", tags=["portfolio"])
 app.include_router(market_router, prefix="/market", tags=["market"])
 
 user_router = APIRouter(prefix="/user", tags=["user"])
+bearer = HTTPBearer()
 
 @user_router.post(
     "/signup",
@@ -74,5 +76,32 @@ async def user_login(
         )
 
     return sign_jwt(creds.email)
+
+
+@user_router.post(
+    "/logout",
+    summary="Invalidate current JWT",
+)
+async def logout(
+    creds: HTTPAuthorizationCredentials = Depends(bearer),
+    db: Database = Depends(get_db),
+):
+    if creds.scheme.lower() != "bearer":
+        raise HTTPException(
+            status=status.HTTP_403_FORBIDDEN,
+            detail="Invalid auth scheme"
+        )
+    
+    payload = decode_jwt(creds.credentials)
+    if not payload:
+        raise HTTPException(
+            status=status.HTTP_401_UNATHORIZED,
+            detail="Invalid or expired token"
+        )
+        
+    blacklist = db["token_blacklist"]
+    await blacklist.insert_one({ "token": creds.credentials })
+    
+    return { "success": True }
 
 app.include_router(user_router)
