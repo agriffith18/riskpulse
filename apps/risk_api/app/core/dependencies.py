@@ -1,4 +1,4 @@
-from fastapi import Request # type: ignore
+from fastapi import Request
 from pymongo.database import Database
 
 def get_db(request: Request) -> Database:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status # type: ignore
+from fastapi import APIRouter, HTTPException, Depends, status, Request # type: ignore
 from typing import List
 from pydantic import BaseModel # type: ignore
 from bson import ObjectId
@@ -30,7 +30,7 @@ async def create_portfolio(
 ) -> str:
     users_col = db["users"]
     portfolios_col = db["portfolios"]
-
+    
     # 1) Verify user exists
     if not await users_col.count_documents(
         {"_id": ObjectId(body.user_id)}, limit=1
@@ -57,7 +57,7 @@ async def read_portfolio(
     db: Database = Depends(get_db),
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
-
+    
     # 1) Fetch by ObjectId
     saved = await portfolios_col.find_one({"_id": ObjectId(user_id)})
     if not saved:
