@@ -1,9 +1,8 @@
 import time
 from typing import Dict
 
-import jwt # type: ignore
-from decouple import config # type: ignore
-
+import jwt 
+from decouple import config 
 
 JWT_SECRET = config("secret")
 JWT_ALGORITHM = config("algorithm")
