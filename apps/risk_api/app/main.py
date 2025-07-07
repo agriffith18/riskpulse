@@ -2,13 +2,13 @@ from fastapi import FastAPI, APIRouter, Body, Depends, HTTPException, status, Re
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pymongo.collection import Collection
 from pymongo.database import Database
-from bson import ObjectId
 import bcrypt
 
 from .core.db import RiskPulseAPI, lifespan
 from .core.dependencies import get_db
 from .api.portfolio import router as portfolio_router
 from .api.stock_utils import router as market_router
+from .api.users import router as users_router
 from app.auth.auth_handler import sign_jwt, decode_jwt
 from app.models.user import UserSchema, UserLoginSchema
 
@@ -22,6 +22,7 @@ async def root():
 # Mount existing routers
 app.include_router(portfolio_router, prefix="/portfolio", tags=["portfolio"])
 app.include_router(market_router, prefix="/market", tags=["market"])
+app.include_router(users_router)
 
 user_router = APIRouter(prefix="/user", tags=["user"])
 bearer = HTTPBearer()
@@ -85,7 +86,7 @@ async def user_login(
 async def logout(
     creds: HTTPAuthorizationCredentials = Depends(bearer),
     db: Database = Depends(get_db),
-):
+) -> dict:
     if creds.scheme.lower() != "bearer":
         raise HTTPException(
             status=status.HTTP_403_FORBIDDEN,
