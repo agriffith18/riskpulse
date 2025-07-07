@@ -1,14 +1,15 @@
-from pydantic_settings import BaseSettings # type: ignore
-from pydantic import Field # type: ignore
+from pydantic_settings import BaseSettings
+from pydantic import ConfigDict, Field
 class Settings(BaseSettings):
-    MONGO_URL: str = Field(..., env="MONGO_URL")
-    secret: str
-    algorithm: str
+    MONGO_URL: str 
+    SECRET: str 
+    ALGORITHM: str
     # can add more, e.g. JWT_SECRET: str, REDIS_URL: str, etc.
 
-    class Config:
-        env_file = ".env"          # for local development
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(
+        env_file = "../../../.env",
+        env_file_encoding = "utf-8",
+    )
 
 # create a single settings instance
 settings = Settings()
