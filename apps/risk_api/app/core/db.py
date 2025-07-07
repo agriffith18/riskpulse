@@ -4,6 +4,10 @@ from pymongo.database import Database
 from contextlib import asynccontextmanager
 from .settings import settings
 
+class RiskPulseAPI(FastAPI):
+    mongodb_client: AsyncMongoClient
+    mongodb: Database
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── STARTUP ────────────────────────────────────────────────────
