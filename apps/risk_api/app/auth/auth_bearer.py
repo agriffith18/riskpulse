@@ -1,5 +1,5 @@
-from fastapi import Request, HTTPException # type: ignore
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # type: ignore
+from fastapi import Request, HTTPException 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
 
 from .auth_handler import decode_jwt
 

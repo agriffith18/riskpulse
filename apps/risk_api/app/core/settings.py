@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
 class Settings(BaseSettings):
     MONGO_URL: str 
     SECRET: str 

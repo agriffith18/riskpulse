@@ -1,9 +1,9 @@
-from fastapi import APIRouter #type: ignore
-from fastapi.concurrency import run_in_threadpool #type: ignore
-import yfinance as yf #type: ignore
+from fastapi import APIRouter 
+from fastapi.concurrency import run_in_threadpool 
+import yfinance as yf 
 from datetime import datetime
-import numpy as np #type: ignore
-import pandas as pd #type: ignore
+import numpy as np 
+import pandas as pd 
 
 router = APIRouter(tags=["market"])
 

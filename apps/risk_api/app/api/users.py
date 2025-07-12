@@ -15,6 +15,8 @@ class UserUpdate(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     email_address: EmailStr | None = None
+    password: str | None = None
+    portfolios: List[Portfolio] | None = None
 
     model_config = ConfigDict(extra="ignore")
 
