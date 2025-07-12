@@ -33,11 +33,7 @@ class TestClass:
                 "email_address": "test@gmail.com",
                 "password": "123",
                 "portfolios": [
-                    {
-                        "positions": [
-                            { "symbol": "APPL", "allocation": 0.75 }
-                        ]
-                    }
+                     {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
                 ]
             }
         )
@@ -67,3 +63,35 @@ class TestClass:
         assert data["portfolios"] == [
             {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
         ]
+        
+    def test_update_user(self, client):
+        assert TestClass.created_id, "test_create_user must run first"
+
+        new_data = {
+            "portfolios": [
+                {
+                    "positions": [
+                        {"symbol": "APPL", "allocation": 0.75},
+                        {"symbol": "NVDA", "allocation": 1.25},
+                    ]
+                }
+            ]
+        }
+
+        response = client.put(f"/users/{TestClass.created_id}", json=new_data)
+        assert response.status_code == 200, response.json()
+
+        data = response.json()
+        assert data["portfolios"] == new_data["portfolios"]
+
+    def test_delete_user(self, client):
+        assert TestClass.created_id, "test_create_user must run first"
+        
+        response = client.delete(f"/users/{TestClass.created_id}")
+        
+        assert response.status_code == 200, response.text
+        
+        assert response.json() is True
+        
+        response2 = client.get(f"/users/{TestClass.created_id}")
+        assert response2.status_code == 404
