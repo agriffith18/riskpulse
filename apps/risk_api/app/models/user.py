@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict # type: ignore
+from pydantic import BaseModel, EmailStr, Field, ConfigDict 
 
 class UserSchema(BaseModel):
     fullname: str = Field(...)
