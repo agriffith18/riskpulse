@@ -72,7 +72,7 @@ class TestClass:
                 {
                     "positions": [
                         {"symbol": "APPL", "allocation": 0.75},
-                        {"symbol": "NVDA", "allocation": 1.25},
+                        {"symbol": "NVDA", "allocation": 0.25},
                     ]
                 }
             ]
@@ -95,3 +95,4 @@ class TestClass:
         
         response2 = client.get(f"/users/{TestClass.created_id}")
         assert response2.status_code == 404
+        
