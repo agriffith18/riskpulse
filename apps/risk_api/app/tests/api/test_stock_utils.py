@@ -25,7 +25,7 @@ def test_health_check(client):
     assert resp.json() == {"status": "ok", "mongodb": "connected"}
     
 class TestClass:
-    def test_get_qoute_success(self, client, monkeypatch):
+    def test_get_quote_success(self, client, monkeypatch):
         class DummyTicker:
            @property
            def info(self):
