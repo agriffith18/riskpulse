@@ -96,4 +96,4 @@ class TestClass:
         
         expected_returns = pd.Series([0.0775, -0.031625])
         expected_std = expected_returns.std()
-        
+        assert round(data, 4) == round(expected_std, 4)
