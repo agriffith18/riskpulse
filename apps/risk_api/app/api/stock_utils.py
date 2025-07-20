@@ -1,5 +1,7 @@
 from fastapi import APIRouter 
 from fastapi.concurrency import run_in_threadpool 
+from pydantic import BaseModel
+from typing import Optional
 import yfinance as yf 
 from datetime import datetime
 import numpy as np 
@@ -11,7 +13,17 @@ from app.api.schemas import Portfolio
 
 MARKET_TICKER = "^GSPC"  # or whatever index you want (e.g. "^SPX", "^DJI", etc.)
 
-
+class HistoricalVaRRequest(BaseModel):
+    portfolio: Portfolio
+    confidence_level: float = 0.95
+    start_date: str = "2020-01-01"
+    end_date: Optional[str] = None
+    
+    
+class DailyReturnsRequest(BaseModel):
+    portfolio: Portfolio
+    start_date: str = "2020-01-01"
+    end_date: str | None
 
 @router.get("/quote/{symbol}", summary="Fetch live quote for a ticker")
 async def get_quote(symbol: str):
@@ -35,17 +47,13 @@ async def get_quote(symbol: str):
         "dayLow": info.get("dayLow"),
     }
 
-
-async def calculate_historical_var(
-    portfolio: Portfolio,
-    confidence_level: float = 0.95,
-    start_date: str = "2020-01-01",
-    end_date: str = None
-) -> float:
-    """
-    Historical VaR for a portfolio of positions.
-    """
-    end_date = end_date or datetime.today().strftime("%Y-%m-%d")
+@router.post("/var", summary="Calculate historical var")
+async def calculate_historical_var(req: HistoricalVaRRequest) -> float:
+    
+    portfolio = req.portfolio
+    confidence_level = req.confidence_level
+    start_date = req.start_date
+    end_date = req.end_date or datetime.today().strftime("%Y-%m-%d")
 
     # 1 Extract tickers and weights
     symbols = [pos.symbol.upper() for pos in portfolio.positions]
@@ -83,17 +91,18 @@ async def calculate_historical_var(
 
     return float(historical_var)
 
-
-async def calculate_daily_returns(
-    portfolio: Portfolio,
-    start_date: str = "2020-01-01",
-    end_date: str = None
-) -> float:
+@router.post("/daily-returns", summary="Calculate daily returns")
+async def calculate_daily_returns(req: DailyReturnsRequest) -> float:
     """
     Fetch closing prices for all tickers in the portfolio,
     compute each ticker’s daily returns, combine them by weight,
     then return the standard deviation of the portfolio’s daily returns.
     """
+    
+    portfolio = req.portfolio
+    start_date = req.start_date
+    end_date = req.end_date or datetime.today().strftime("%Y-%m-%d")
+    
     # 1 Extract symbols and weights
     symbols = [pos.symbol.upper() for pos in portfolio.positions]
     allocations = np.array([pos.allocation for pos in portfolio.positions])
@@ -138,6 +147,7 @@ async def calculate_daily_returns(
 #
 # If β is 1.0, on average your portfolio moves in lockstep with the market.
 
+@router.post("/beta", summary="Calculate Beta")
 async def beta_calculation(
     portfolio: Portfolio,
     start_date: str = "2020-01-01",
