@@ -106,3 +106,10 @@ async def logout(
     return { "success": True }
 
 app.include_router(user_router)
+
+
+@app.on_event("startup")
+async def show_routes():
+    print("🚦 Registered routes:")
+    for route in app.routes:
+        print(route.path, route.methods)

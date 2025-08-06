@@ -24,35 +24,33 @@ def test_health_check(client):
     assert resp.json() == {"status": "ok", "mongodb": "connected"}
 
 
-"""
-class CreatePortfolioRequest(BaseModel):
-    user_id: str
-    portfolio: Portfolio
-"""
-class TestClass:
-    portfolio = {
+def test_create_and_read_portfolio(client: TestClient):
+    # Step 1: Insert test user
+    client_db = MongoClient(settings.MONGO_URL)
+    db = client_db.get_default_database()
+    user_id = str(db["users"].insert_one({"name": "Test User"}).inserted_id)
+    client_db.close()
+
+    portfolio_data = {
         "positions": [
             {"symbol": "AAPL", "allocation": 0.75},
-            {"symbol": "NVDA", "allocation": 0.25},    
+            {"symbol": "NVDA", "allocation": 0.25},
         ]
     }
+
+    # Step 2: Create portfolio
+    response = client.post(
+        "/portfolio",
+        json={"user_id": user_id, "portfolio": portfolio_data}
+    )
+    assert response.status_code == 201, response.json()
+    portfolio_id = response.json()
+    assert isinstance(portfolio_id, str)
+
+    # Step 3: Read portfolio
+    response = client.get(f"/portfolio/id/{portfolio_id}")
+    assert response.status_code == 200, response.json()
+    data = response.json()
+    assert data["id"] == portfolio_id
+    assert data["positions"] == portfolio_data["positions"]
     
-    def test_create_portfolio(self, client: TestClient):
-        client_db = MongoClient(settings.MONGO_URL)
-        db = client_db.get_default_database()
-        user_id = str(db["users"].insert_one({ "name": "Test User" }).inserted_id)
-        client_db.close()
-        
-        response = client.post(
-            "/portfolio",
-            json={
-                "user_id": user_id,
-                "portfolio": self.portfolio
-            }
-        )
-        
-        assert response.status_code == 201, response.json()
-        data = response.json()
-        assert isinstance(data, str)
-        TestClass.created_id = data
-        

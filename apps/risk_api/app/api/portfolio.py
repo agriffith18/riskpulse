@@ -29,7 +29,7 @@ async def db_health(db: Database = Depends(get_db)) -> dict:
 
 #create
 @router.post(
-    "",
+    "/",
     response_model=str,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new portfolio for a user",
@@ -58,19 +58,19 @@ async def create_portfolio(
 
 # read
 @router.get(
-    "/{user_id}",
+    "/id/{portfolio_id}",
     response_model=Portfolio,
     summary="Retrieve a saved portfolio by its ID",
     tags=["portfolio"]
 )
 async def read_portfolio(
-    user_id: str,
+    portfolio_id: str,
     db: Database = Depends(get_db),
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
     
     # 1) Fetch by ObjectId
-    saved = await portfolios_col.find_one({"_id": ObjectId(user_id)})
+    saved = await portfolios_col.find_one({"_id": ObjectId(portfolio_id)})
     if not saved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Portfolio not found")
 
@@ -81,16 +81,17 @@ async def read_portfolio(
     return Portfolio.model_validate(saved)
 
 
+
 # update
 @router.put(
-    "/{user_id}",
+    "/{portfolio_id}",
     response_model=Portfolio,
     summary="Update a saved portfolio by its ID",
     tags=["portfolio"]
 )
 async def update_portfolio(
     body: Portfolio,
-    user_id: str,
+    portfolio_id: str,
     db: Database = Depends(get_db),
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
@@ -100,7 +101,7 @@ async def update_portfolio(
 
     # 2) Perform find_one_and_update:
     updated = await portfolios_col.find_one_and_update(
-        {"_id": ObjectId(user_id)},       
+        {"_id": ObjectId(portfolio_id)},       
         {"$set": update_data},        
         return_document=ReturnDocument.AFTER,
     )
@@ -119,18 +120,18 @@ async def update_portfolio(
     return Portfolio.model_validate(updated)
 
 @router.delete(
-    "/{user_id}",
+    "/{portfolio_id}",
     response_model=bool,                       
     summary="Delete a portfolio by its ID",
     tags=["portfolio"]
 )
 async def delete_portfolio(
-    user_id: str,
+    portfolio_id: str,
     db: Database = Depends(get_db),            
 ) -> bool:
     portfolios_col = db["portfolios"]
 
-    if not await portfolios_col.count_documents({"_id": ObjectId(user_id)}, limit=1):
+    if not await portfolios_col.count_documents({"_id": ObjectId(portfolio_id)}, limit=1):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
@@ -138,14 +139,14 @@ async def delete_portfolio(
 
     # Perform the deletion by ObjectId
     result = await portfolios_col.delete_one(
-        {"_id": ObjectId(user_id)}
+        {"_id": ObjectId(portfolio_id)}
     )
     
     #  Returns True if exactly one document was removed
     return result.deleted_count == 1
 
 
-@router.get("/{user_id}/var", response_model=float)
+@router.get("/user/{user_id}/var", response_model=float)
 async def get_portfolio_var(
     user_id: str,
     db: Database = Depends(get_db),
@@ -165,7 +166,7 @@ async def get_portfolio_var(
     return var
 
 # calls beta function inside stock_utils.py
-@router.get("/{user_id}/beta", response_model=float)
+@router.get("/user/{user_id}/beta", response_model=float)
 async def get_portfolio_beta(
     user_id: str,
     db: Database = Depends(get_db),
@@ -179,3 +180,4 @@ async def get_portfolio_beta(
 
     beta_value = await beta_calculation(portfolio)
     return beta_value
+
