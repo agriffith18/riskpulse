@@ -26,7 +26,7 @@ def test_health_check(client):
     assert resp.json() == {"status": "ok", "mongodb": "connected"}
     
 class TestClass:
-    portfolios = {
+    portfolio = {
         "positions": [
             {"symbol": "AAPL", "allocation": 0.75},
             {"symbol": "NVDA", "allocation": 0.25},    
@@ -61,7 +61,7 @@ class TestClass:
     
     def test_calculate_historical_1day_var(self, client: TestClient):
         response = client.post("/market/var", json={
-            "portfolio": self.portfolios, 
+            "portfolio": self.portfolio, 
             "confidence_level": 0.95,
             "start_date": "2020-01-01",
             "end_date": None,
@@ -85,7 +85,7 @@ class TestClass:
         monkeypatch.setattr(yf, "download", mock_download) 
             
         response = client.post("/market/daily-returns", json={
-            "portfolio": self.portfolios,
+            "portfolio": self.portfolio,
             "start_date": "2020-01-01",
             "end_date": None,
         })

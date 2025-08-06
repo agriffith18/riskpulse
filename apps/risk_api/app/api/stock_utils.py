@@ -101,16 +101,14 @@ async def calculate_daily_returns(req: DailyReturnsRequest) -> float:
     
     portfolio = req.portfolio
     start_date = req.start_date
+    # Ensure end_date is a string "YYYY-MM-DD"
     end_date = req.end_date or datetime.today().strftime("%Y-%m-%d")
     
     # 1 Extract symbols and weights
     symbols = [pos.symbol.upper() for pos in portfolio.positions]
     allocations = np.array([pos.allocation for pos in portfolio.positions])
 
-    # 2 Ensure end_date is a string "YYYY-MM-DD"
-    end_date = end_date or datetime.today().strftime("%Y-%m-%d")
-
-    # 3 Download closing prices off the event loop
+    # 2 Download closing prices off the event loop
     df = await run_in_threadpool(
         yf.download,               
         symbols,                   
@@ -121,21 +119,21 @@ async def calculate_daily_returns(req: DailyReturnsRequest) -> float:
         auto_adjust=True
     )
 
-    # 4 Extract the "Close" price DataFrame uniformly
+    # 3 Extract the "Close" price DataFrame uniformly
     close = (
         df["Close"]
         if isinstance(df.columns, pd.MultiIndex)
         else df["Close"].to_frame()
     )
 
-    # 5 Compute each ticker’s daily returns, dropping the first NaN row
+    # 4 Compute each ticker’s daily returns, dropping the first NaN row
     returns = close.pct_change().dropna()
 
-    # 6 Compute the portfolio’s daily return each day:
+    # 5 Compute the portfolio’s daily return each day:
     # a weighted sum of individual returns
     port_returns = returns.dot(allocations)
 
-    # 7 Return the standard deviation of the portfolio’s daily returns
+    # 6 Return the standard deviation of the portfolio’s daily returns
     return float(port_returns.std())
 
 # What is “beta”?

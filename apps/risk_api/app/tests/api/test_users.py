@@ -24,7 +24,7 @@ def test_health_check(client):
 class TestClass:  
     created_id: str = ""
      
-    def test_create_user(self, client):
+    def test_create_user(self, client: TestClient):
         response = client.post(
             "/users",
             json={
@@ -49,7 +49,7 @@ class TestClass:
         assert isinstance(data["_id"], str)
         TestClass.created_id = data["_id"]
         
-    def test_get_user(self, client):
+    def test_get_user(self, client: TestClient):
         assert TestClass.created_id, "test_create_user must run first"
         
         response = client.get(f"/users/{TestClass.created_id}")
@@ -64,7 +64,7 @@ class TestClass:
             {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
         ]
         
-    def test_update_user(self, client):
+    def test_update_user(self, client: TestClient):
         assert TestClass.created_id, "test_create_user must run first"
 
         new_data = {
@@ -84,7 +84,7 @@ class TestClass:
         data = response.json()
         assert data["portfolios"] == new_data["portfolios"]
 
-    def test_delete_user(self, client):
+    def test_delete_user(self, client: TestClient):
         assert TestClass.created_id, "test_create_user must run first"
         
         response = client.delete(f"/users/{TestClass.created_id}")
