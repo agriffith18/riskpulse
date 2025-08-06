@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request # type: ignore
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List
-from pydantic import BaseModel # type: ignore
+from pydantic import BaseModel 
 from bson import ObjectId
 from pymongo.database import Database
 from pymongo.collection import ReturnDocument
@@ -12,9 +12,20 @@ from app.api.schemas import Portfolio, CreatePortfolioRequest
 from app.api.stock_utils import calculate_historical_var, beta_calculation
 
 router = APIRouter(
-    prefix="/portfolio",
     tags=["portfolio"],
 )
+
+@router.get("/health", summary="DB health check")
+async def db_health(db: Database = Depends(get_db)) -> dict:
+    try:
+        await db.client.admin.command("ping")
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MongoDB not reachable"
+        )
+    return {"status": "ok", "mongodb": "connected"}
+
 
 #create
 @router.post(
