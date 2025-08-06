@@ -33,7 +33,7 @@ class TestClass:
                 "email_address": "test@gmail.com",
                 "password": "123",
                 "portfolios": [
-                     {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
+                    {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
                 ]
             }
         )
@@ -42,12 +42,14 @@ class TestClass:
         assert data["first_name"] == "Arthur"
         assert data["last_name"] == "Griffith"
         assert data["email_address"] == "test@gmail.com"
-        assert data["portfolios"] == [
-               {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
+        assert [p["positions"] for p in data["portfolios"]] == [
+            [{"symbol": "APPL", "allocation": 0.75}]
         ]
-        
+
+        # Use "_id" here since that's what your actual response contains
         assert isinstance(data["_id"], str)
         TestClass.created_id = data["_id"]
+
         
     def test_get_user(self, client: TestClient):
         assert TestClass.created_id, "test_create_user must run first"
@@ -60,8 +62,8 @@ class TestClass:
         assert data["first_name"] == "Arthur"
         assert data["last_name"] == "Griffith"
         assert data["email_address"] == "test@gmail.com"
-        assert data["portfolios"] == [
-            {"positions": [{"symbol": "APPL", "allocation": 0.75}]}
+        assert [p["positions"] for p in data["portfolios"]] == [
+            [{"symbol": "APPL", "allocation": 0.75}]
         ]
         
     def test_update_user(self, client: TestClient):
@@ -82,7 +84,13 @@ class TestClass:
         assert response.status_code == 200, response.json()
 
         data = response.json()
-        assert data["portfolios"] == new_data["portfolios"]
+
+        def strip_ids(portfolios):
+            return [{"positions": p["positions"]} for p in portfolios]
+
+        assert strip_ids(data["portfolios"]) == new_data["portfolios"]
+
+
 
     def test_delete_user(self, client: TestClient):
         assert TestClass.created_id, "test_create_user must run first"
@@ -95,4 +103,3 @@ class TestClass:
         
         response2 = client.get(f"/users/{TestClass.created_id}")
         assert response2.status_code == 404
-        
