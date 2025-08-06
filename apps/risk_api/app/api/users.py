@@ -83,7 +83,8 @@ async def create_user(
     result = await users_col.insert_one(user.model_dump())
     saved = await users_col.find_one({"_id": result.inserted_id})
     saved["id"] = str(saved.pop("_id"))
-    return UserOut.model_validate(saved)
+    return UserOut.model_validate(saved).model_dump(by_alias=True)
+
 
 
 @router.get(
@@ -103,7 +104,8 @@ async def get_user(
             detail="User not found"
         )
     doc["id"] = str(doc.pop("_id"))
-    return UserOut.model_validate(doc)
+    return UserOut.model_validate(doc).model_dump(by_alias=True)
+
 
 
 @router.put(
@@ -129,7 +131,8 @@ async def update_user(
             detail="User not found"
         )
     updated["id"] = str(updated.pop("_id"))
-    return UserOut.model_validate(updated)
+    return UserOut.model_validate(updated).model_dump(by_alias=True)
+
 
 
 @router.delete(

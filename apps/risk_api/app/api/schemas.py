@@ -1,5 +1,5 @@
 from pydantic import BaseModel # type: ignore
-from typing import List
+from typing import List, Optional
 
 class Position(BaseModel):
     symbol: str
@@ -7,6 +7,7 @@ class Position(BaseModel):
 
 
 class Portfolio(BaseModel):
+    id: Optional[str] = None 
     positions: List[Position]
 
 
