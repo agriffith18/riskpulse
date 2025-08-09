@@ -86,7 +86,6 @@ async def create_user(
     return UserOut.model_validate(saved).model_dump(by_alias=True)
 
 
-
 @router.get(
     "/{user_id}",
     response_model=UserOut,
