@@ -79,7 +79,7 @@ def test_update_portfolio(client: TestClient, test_user_id: str):
     assert response.status_code == 201, response.json()
     portfolio_id = response.json()
 
-    updated = {
+    updated_portfolio = {
         "positions": [
             {"symbol": "AAPL", "allocation": 0.50},
             {"symbol": "NVDA", "allocation": 0.30},
@@ -87,9 +87,9 @@ def test_update_portfolio(client: TestClient, test_user_id: str):
         ]
     }
     
-    response = client.put(f"/portfolio/{portfolio_id}", json=updated)
+    response = client.put(f"/portfolio/{portfolio_id}", json=updated_portfolio)
     assert response.status_code == 200, response.json()
 
     data = response.json()
     assert data["id"] == portfolio_id
-    assert data["positions"] == updated["positions"]
+    assert data["positions"] == updated_portfolio["positions"]
