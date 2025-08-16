@@ -5,8 +5,10 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.database import Database
 from pymongo.collection import ReturnDocument
+import json
 
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
+from ..core.redis_client import redis_client
 from .stock_utils import get_quote, calculate_historical_var, HistoricalVaRRequest
 
 from app.api.schemas import Portfolio, CreatePortfolioRequest
@@ -185,9 +187,20 @@ async def get_portfolio_var(
     saved["id"] = str(saved.pop("_id"))
     portfolio = Portfolio.model_validate(saved)
 
-    # 4) Calculate VaR
+    # 4) Check Redis cache first - create cache key based on portfolio positions
+    portfolio_hash = str(hash(str(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
+    cache_key = f"var:{portfolio_hash}"
+    
+    cached_var = await redis_client.get(cache_key)
+    if cached_var:
+        return float(cached_var)
+
+    # 5) Cache miss - calculate VaR
     var_request = HistoricalVaRRequest(portfolio=portfolio)
     var = await calculate_historical_var(var_request)
+
+    # 6) Cache the result for 30 minutes (1800 seconds) - VaR calculations change less frequently
+    await redis_client.set(cache_key, str(var), ex=1800)
 
     return var
 
@@ -210,6 +223,19 @@ async def get_portfolio_beta(
     saved["id"] = str(saved.pop("_id"))
     portfolio = Portfolio.model_validate(saved)
 
+    # Check Redis cache first - create cache key based on portfolio positions
+    portfolio_hash = str(hash(str(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
+    cache_key = f"beta:{portfolio_hash}"
+    
+    cached_beta = await redis_client.get(cache_key)
+    if cached_beta:
+        return float(cached_beta)
+
+    # Cache miss - calculate beta
     beta_value = await beta_calculation(portfolio)
+
+    # Cache the result for 30 minutes (1800 seconds) - beta calculations change less frequently
+    await redis_client.set(cache_key, str(beta_value), ex=1800)
+
     return beta_value
 
