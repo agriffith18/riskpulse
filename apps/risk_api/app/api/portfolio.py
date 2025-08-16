@@ -2,11 +2,12 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List
 from pydantic import BaseModel 
 from bson import ObjectId
+from bson.errors import InvalidId
 from pymongo.database import Database
 from pymongo.collection import ReturnDocument
 
 from ..core.dependencies import get_db  # a small helper that returns request.app.mongodb
-from .stock_utils import get_quote, calculate_historical_var
+from .stock_utils import get_quote, calculate_historical_var, HistoricalVaRRequest
 
 from app.api.schemas import Portfolio, CreatePortfolioRequest
 from app.api.stock_utils import calculate_historical_var, beta_calculation
@@ -69,15 +70,21 @@ async def read_portfolio(
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
     
-    # 1) Fetch by ObjectId
-    saved = await portfolios_col.find_one({"_id": ObjectId(portfolio_id)})
+    # 1) Validate ObjectId format and convert - return 422 for invalid format instead of 500
+    try:
+        object_id = ObjectId(portfolio_id)
+    except InvalidId:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid portfolio ID format")
+    
+    # 2) Fetch by ObjectId
+    saved = await portfolios_col.find_one({"_id": object_id})
     if not saved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Portfolio not found")
 
-    # 2) Convert _id → id
+    # 3) Convert _id → id
     saved["id"] = str(saved.pop("_id"))
 
-    # 3) Validate into your Pydantic model & return
+    # 4) Validate into your Pydantic model & return
     return Portfolio.model_validate(saved)
 
 
@@ -96,27 +103,33 @@ async def update_portfolio(
 ) -> Portfolio:
     portfolios_col = db["portfolios"]
 
-    # 1) Build the update data from the incoming model
+    # 1) Validate ObjectId format and convert - return 422 for invalid format instead of 500
+    try:
+        object_id = ObjectId(portfolio_id)
+    except InvalidId:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid portfolio ID format")
+
+    # 2) Build the update data from the incoming model
     update_data = body.model_dump(exclude_unset=True, by_alias=True)
 
-    # 2) Perform find_one_and_update:
+    # 3) Perform find_one_and_update:
     updated = await portfolios_col.find_one_and_update(
-        {"_id": ObjectId(portfolio_id)},       
+        {"_id": object_id},       
         {"$set": update_data},        
         return_document=ReturnDocument.AFTER,
     )
 
-    # 3) If nothing was found, 404
+    # 4) If nothing was found, 404
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Portfolio not found",
         )
 
-    # 4) Convert Mongo’s _id -> string id
+    # 5) Convert Mongo's _id -> string id
     updated["id"] = str(updated.pop("_id"))
 
-    # 5) Validate & return the updated document
+    # 6) Validate & return the updated document
     return Portfolio.model_validate(updated)
 
 @router.delete(
@@ -131,7 +144,13 @@ async def delete_portfolio(
 ) -> bool:
     portfolios_col = db["portfolios"]
 
-    if not await portfolios_col.count_documents({"_id": ObjectId(portfolio_id)}, limit=1):
+    # 1) Validate ObjectId format and convert - return 422 for invalid format instead of 500
+    try:
+        object_id = ObjectId(portfolio_id)
+    except InvalidId:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid portfolio ID format")
+
+    if not await portfolios_col.count_documents({"_id": object_id}, limit=1):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
@@ -139,39 +158,52 @@ async def delete_portfolio(
 
     # Perform the deletion by ObjectId
     result = await portfolios_col.delete_one(
-        {"_id": ObjectId(portfolio_id)}
+        {"_id": object_id}
     )
     
     #  Returns True if exactly one document was removed
     return result.deleted_count == 1
 
 
-@router.get("/user/{user_id}/var", response_model=float)
+@router.get("/{portfolio_id}/var", response_model=float)
 async def get_portfolio_var(
-    user_id: str,
+    portfolio_id: str,
     db: Database = Depends(get_db),
 ) -> float:
-    # 1 Fetch portfolio from Mongo
-    saved = await db["portfolios"].find_one({"_id": ObjectId(user_id)})
+    # 1) Validate ObjectId format and convert - return 422 for invalid format instead of 500
+    try:
+        object_id = ObjectId(portfolio_id)
+    except InvalidId:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid portfolio ID format")
+    
+    # 2) Fetch portfolio from Mongo
+    saved = await db["portfolios"].find_one({"_id": object_id})
     if not saved:
         raise HTTPException(404, "Portfolio not found")
 
-    # 2 Validate into Pydantic
+    # 3) Validate into Pydantic
     saved["id"] = str(saved.pop("_id"))
     portfolio = Portfolio.model_validate(saved)
 
-    # 3 Calculate VaR
-    var = await calculate_historical_var(portfolio)
+    # 4) Calculate VaR
+    var_request = HistoricalVaRRequest(portfolio=portfolio)
+    var = await calculate_historical_var(var_request)
 
     return var
 
 # calls beta function inside stock_utils.py
-@router.get("/user/{user_id}/beta", response_model=float)
+@router.get("/{portfolio_id}/beta", response_model=float)
 async def get_portfolio_beta(
-    user_id: str,
+    portfolio_id: str,
     db: Database = Depends(get_db),
 ) -> float:
-    saved = await db["portfolios"].find_one({"_id": ObjectId(user_id)})
+    # 1) Validate ObjectId format and convert - return 422 for invalid format instead of 500
+    try:
+        object_id = ObjectId(portfolio_id)
+    except InvalidId:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid portfolio ID format")
+    
+    saved = await db["portfolios"].find_one({"_id": object_id})
     if not saved:
         raise HTTPException(404, "Portfolio not found")
 
