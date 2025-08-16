@@ -6,6 +6,7 @@ import bcrypt
 
 from .core.db import RiskPulseAPI, lifespan
 from .core.dependencies import get_db
+from .core.redis_client import redis_client
 from .api.portfolio import router as portfolio_router
 from .api.stock_utils import router as market_router
 from .api.users import router as users_router
@@ -110,6 +111,6 @@ app.include_router(user_router)
 
 @app.on_event("startup")
 async def show_routes():
-    print("🚦 Registered routes:")
+    print("Registered routes:")
     for route in app.routes:
         print(route.path, route.methods)

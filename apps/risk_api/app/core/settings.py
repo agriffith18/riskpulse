@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     MONGO_URL: str 
     SECRET: str 
     ALGORITHM: str
-    # can add more, e.g. JWT_SECRET: str, REDIS_URL: str, etc.
+    REDIS_URL: str = "redis://localhost:6379"  # Default for Docker container
 
     model_config = ConfigDict()
 

@@ -5,7 +5,9 @@ from typing import Optional
 import yfinance as yf 
 from datetime import datetime
 import numpy as np 
-import pandas as pd 
+import pandas as pd
+import json
+from ..core.redis_client import redis_client 
 
 router = APIRouter(tags=["market"])
 
@@ -27,25 +29,39 @@ class DailyReturnsRequest(BaseModel):
 
 @router.get("/quote/{symbol}", summary="Fetch live quote for a ticker")
 async def get_quote(symbol: str):
-    # 1) Instantiate the Ticker in a thread, not on the event loop
+    symbol_upper = symbol.upper()
+    cache_key = f"quote:{symbol_upper}"
+    
+    # 1) Check Redis cache first
+    cached_data = await redis_client.get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+    
+    # 2) Cache miss - fetch from Yahoo Finance
+    # Instantiate the Ticker in a thread, not on the event loop
     # This helper offloads a blocking call into a background thread, so your async function can await it without stalling the loop.
-    ticker = await run_in_threadpool(yf.Ticker, symbol.upper())
+    ticker = await run_in_threadpool(yf.Ticker, symbol_upper)
 
-    # 2) Fetch the info dict also off the event loop
+    # Fetch the info dict also off the event loop
     """
-    This line basically tells FastAPI, please take this small function (lambda: ticker.info), run it off on a worker thread, and give me back its return value once it’s done.
+    This line basically tells FastAPI, please take this small function (lambda: ticker.info), run it off on a worker thread, and give me back its return value once it's done.
     """
     info = await run_in_threadpool(lambda: ticker.info)
 
-    # 3) Return a subset (avoid spamming your clients with 100s of fields)
-    return {
-        "symbol": symbol.upper(),
+    # 3) Prepare response data (subset to avoid spamming clients with 100s of fields)
+    quote_data = {
+        "symbol": symbol_upper,
         "currentPrice": info.get("currentPrice"),
         "previousClose": info.get("previousClose"),
         "open": info.get("open"),
         "dayHigh": info.get("dayHigh"),
         "dayLow": info.get("dayLow"),
     }
+    
+    # 4) Cache the result for 2 minutes (120 seconds) to reduce API calls
+    await redis_client.set(cache_key, json.dumps(quote_data), ex=120)
+    
+    return quote_data
 
 @router.post("/var", summary="Calculate historical var")
 async def calculate_historical_var(req: HistoricalVaRRequest) -> float:
