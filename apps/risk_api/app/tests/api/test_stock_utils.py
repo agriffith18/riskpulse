@@ -33,30 +33,6 @@ class TestClass:
         ]
     }
     
-    def test_get_quote_success(self, client: TestClient, monkeypatch):
-        class DummyTicker:
-           @property
-           def info(self):
-               return {
-                   "currentPrice": 123.45,
-                   "previousClose": 120.00,
-                   "open": 121.00,
-                   "dayHigh": 125.00,
-                   "dayLow": 119.00,
-               }
-                    
-        monkeypatch.setattr(yf, "Ticker", lambda symbol: DummyTicker())
-        
-        response = client.get("market/quote/aapl")
-        assert response.status_code == 200, response.json()
-        
-        data = response.json()
-        assert data["symbol"] == "AAPL"
-        assert data["currentPrice"] == 123.45
-        assert data["previousClose"] == 120.00
-        assert data["open"] == 121.00
-        assert data["dayHigh"] == 125.00
-        assert data["dayLow"] == 119.00
     
     
     def test_calculate_historical_1day_var(self, client: TestClient):

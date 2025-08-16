@@ -33,9 +33,13 @@ async def get_quote(symbol: str):
     cache_key = f"quote:{symbol_upper}"
     
     # 1) Check Redis cache first
-    cached_data = await redis_client.get(cache_key)
-    if cached_data:
-        return json.loads(cached_data)
+    try:
+        cached_data = await redis_client.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+    except Exception:
+        # Redis unavailable - continue without cache
+        pass
     
     # 2) Cache miss - fetch from Yahoo Finance
     # Instantiate the Ticker in a thread, not on the event loop
