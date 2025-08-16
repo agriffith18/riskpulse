@@ -24,4 +24,7 @@ venv/
 # Secrets
 .env
 
+# Personal development notes
+DEVELOPMENT.md
+
 
