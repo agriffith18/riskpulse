@@ -28,7 +28,7 @@ class DailyReturnsRequest(BaseModel):
     end_date: str | None
 
 @router.get("/quote/{symbol}", summary="Fetch live quote for a ticker")
-async def get_quote(symbol: str):
+async def get_quote(symbol: str) -> dict[str, str | float | None]:
     symbol_upper = symbol.upper()
     cache_key = f"quote:{symbol_upper}"
     

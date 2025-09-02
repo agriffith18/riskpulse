@@ -188,7 +188,7 @@ async def get_portfolio_var(
     portfolio = Portfolio.model_validate(saved)
 
     # 4) Check Redis cache first - create cache key based on portfolio positions
-    portfolio_hash = str(hash(str(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
+    portfolio_hash = str(hash(tuple(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
     cache_key = f"var:{portfolio_hash}"
     
     cached_var = await redis_client.get(cache_key)
@@ -224,7 +224,7 @@ async def get_portfolio_beta(
     portfolio = Portfolio.model_validate(saved)
 
     # Check Redis cache first - create cache key based on portfolio positions
-    portfolio_hash = str(hash(str(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
+    portfolio_hash = str(hash(tuple(sorted([(pos.symbol, pos.allocation) for pos in portfolio.positions]))))
     cache_key = f"beta:{portfolio_hash}"
     
     cached_beta = await redis_client.get(cache_key)
